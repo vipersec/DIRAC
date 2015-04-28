@@ -108,7 +108,7 @@ NEW: Stager API: dirac-stager-monitor-file, dirac-stager-monitor-jobs,
 *SMS
 NEW: StorageManagementDB - use python table description      
 
-[v6r13-pre24]
+[v6r13-pre25]
 
 CHANGE: Separating fixed and variable parts of error log messages for multiple systems 
         to allow SystemLogging to work
