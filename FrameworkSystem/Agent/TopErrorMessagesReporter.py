@@ -1,4 +1,3 @@
-# $HeadURL$
 """  TopErrorMessagesReporter produces a list with the most common errors 
    injected in the SystemLoggingDB and sends a notification to a mailing 
    list and specific users. 
