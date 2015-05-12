@@ -388,7 +388,7 @@ class DiracAdmin( API ):
     serviceSetups = gConfig.getOptionsDict( '/DIRAC/Setups/%s' % setup )
     if not serviceSetups['OK']:
       return S_ERROR( 'Could not get /DIRAC/Setups/%s options' % setup )
-    serviceSetups = serviceSetups['Value'] #dict
+    serviceSetups = serviceSetups['Value']  # dict
     systemList = gConfig.getSections( '/Systems' )
     if not systemList['OK']:
       return S_ERROR( 'Could not get Systems sections' )
@@ -476,7 +476,7 @@ class DiracAdmin( API ):
        counter for a job or list of jobs and allows them to run as new.
 
        Example::
-       
+
          >>> print dirac.reset(12345)
          {'OK': True, 'Value': [12345]}
 
@@ -552,7 +552,7 @@ class DiracAdmin( API ):
     else:
       self.log.warn( 'No standard error returned' )
 
-    self.log.info( 'Outputs retrieved in %s' % outputPath )
+    self.log.always( 'Outputs retrieved in %s' % outputPath )
     return result
 
   #############################################################################
@@ -612,7 +612,7 @@ class DiracAdmin( API ):
     else:
       self.log.warn( 'No standard error returned' )
 
-    self.log.notice( 'Outputs retrieved in %s' % outputPath )
+    self.log.always( 'Outputs retrieved in %s' % outputPath )
     return result
 
   #############################################################################
@@ -632,7 +632,7 @@ class DiracAdmin( API ):
     wmsAdmin = RPCClient( 'WorkloadManagement/WMSAdministrator' )
     result = wmsAdmin.getPilotInfo( gridReference )
     return result
-  
+
   #############################################################################
   def killPilot( self, gridReference ):
     """Kill the pilot specified
@@ -737,7 +737,7 @@ class DiracAdmin( API ):
                       requestType = None, status = None, operation = None, ownerDN = None,
                       ownerGroup = None, requestStart = 0, limit = 100, printOutput = False ):
     """Select requests from the request management system. A few notes on the selection criteria:
-    
+
          - jobID is the WMS JobID for the request (if applicable)
          - requestID is assigned during submission of the request
          - requestName is the corresponding XML file name
@@ -749,7 +749,7 @@ class DiracAdmin( API ):
 
        >>> dirac.selectRequests(jobID='4894')
        {'OK': True, 'Value': [[<Requests>]]}
-       
+
     """
     options = {'RequestID':requestID, 'RequestName':requestName, 'JobID':jobID, 'OwnerDN':ownerDN,
                'OwnerGroup':ownerGroup, 'RequestType':requestType, 'Status':status, 'Operation':operation}
@@ -802,7 +802,7 @@ class DiracAdmin( API ):
 
   #############################################################################
   def getRequestSummary( self, printOutput = False ):
-    """ 
+    """
     Get a summary of the requests in the request DB.
     """
     requestClient = RPCClient( "RequestManagement/centralURL", timeout = 120 )
@@ -818,7 +818,7 @@ class DiracAdmin( API ):
 
   #############################################################################
   def getExternalPackageVersions( self ):
-    """ 
+    """
     Simple function that attempts to obtain the external versions for
     the local DIRAC installation (frequently needed for debugging purposes).
     """
@@ -977,13 +977,13 @@ class DiracAdmin( API ):
   def csRegisterUser( self, username, properties ):
     """
     Registers a user in the CS.
-    
+
         - username: Username of the user (easy;)
         - properties: Dict containing:
             - DN
             - groups : list/tuple of groups the user belongs to
             - <others> : More properties of the user, like mail
-    
+
     """
     return self.csAPI.addUser( username, properties )
 
@@ -997,7 +997,7 @@ class DiracAdmin( API ):
   #############################################################################
   def csModifyUser( self, username, properties, createIfNonExistant = False ):
     """
-    Modify a user in the CS. Takes the same params as in addUser and 
+    Modify a user in the CS. Takes the same params as in addUser and
     applies the changes
     """
     return self.csAPI.modifyUser( username, properties, createIfNonExistant )
@@ -1078,7 +1078,7 @@ class DiracAdmin( API ):
 
   #############################################################################
   def sendMail( self, address, subject, body, fromAddress = None, localAttempt = True ):
-    """ 
+    """
     Send mail to specified address with body.
     """
     notification = NotificationClient()
@@ -1086,7 +1086,7 @@ class DiracAdmin( API ):
 
   #############################################################################
   def sendSMS( self, userName, body, fromAddress = None ):
-    """ 
+    """
     Send mail to specified address with body.
     """
     if len( body ) > 160:
@@ -1143,4 +1143,4 @@ class DiracAdmin( API ):
     """
     return ldapSE( site, useVO, host = host )
 
-#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#
+# EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#EOF#

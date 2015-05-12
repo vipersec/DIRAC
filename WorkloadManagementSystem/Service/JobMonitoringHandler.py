@@ -354,7 +354,7 @@ class JobMonitoringHandler( RequestHandler ):
         return S_ERROR( 'Failed to select jobs: ' + result['Message'] )
 
       summaryJobList = result['Value']
-      if not self.globalJobsInfo:      
+      if not self.globalJobsInfo:
         validJobs, _invalidJobs, _nonauthJobs, _ownJobs = self.jobPolicy.evaluateJobRights( summaryJobList,
                                                                                             RIGHT_GET_INFO )
         summaryJobList = validJobs
@@ -516,4 +516,3 @@ class JobMonitoringHandler( RequestHandler ):
     Return Distinct Values of OwnerGroup from the JobsDB
     """
     return gJobDB.getDistinctJobAttributes( 'OwnerGroup' )
-  
