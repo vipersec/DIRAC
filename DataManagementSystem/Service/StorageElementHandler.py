@@ -2,8 +2,8 @@
 # $HeadURL $
 # File: StorageElementHandler.py
 ########################################################################
-""" 
-:mod: StorageElementHandler 
+"""
+:mod: StorageElementHandler
 
 .. module: StorageElementHandler
   :synopsis: StorageElementHandler is the implementation of a simple StorageElement
@@ -47,6 +47,24 @@ from DIRAC.Resources.Storage.StorageBase import StorageBase
 BASE_PATH = ""
 MAX_STORAGE_SIZE = 0
 USE_TOKENS = False
+
+def diskSpace(path, size = 'GB'):
+    """
+      Returns disk usage of the given path.
+    """
+
+    if size == "KB":
+      convert = 1024
+    elif size == "MB":
+      convert = 1.048576e6
+    elif size == "GB":
+      convert = 1.073741824e9
+    else:
+      return S_ERROR( "No valid size specified" )
+
+    st = os.statvfs(path)
+    free = (st.f_bavail * st.f_frsize) / convert
+    return S_OK( int( round(free) ) )
 
 def initializeStorageElementHandler( serviceInfo ):
   """  Initialize Storage Element global settings
@@ -150,13 +168,13 @@ class StorageElementHandler( RequestHandler ):
     resultDict['Lost'] = 0
     resultDict['Unavailable'] = 0
     resultDict['Mode'] = S_IMODE( mode )
-    
+
 
     if resultDict['File']:
       cks = fileAdler( path )
       resultDict['Checksum'] = cks
 
-    
+
     resultDict = StorageBase._addCommonMetadata( resultDict )
 
 
@@ -174,6 +192,12 @@ class StorageElementHandler( RequestHandler ):
     """ Get metadata for the file or directory specified by fileID
     """
     return self.__getFileStat( self.__resolveFileID( fileID ) )
+
+  types_getRemainingDiskSpace = [StringTypes]
+  def export_getRemainingDiskSpace( self, path, size ):
+    """ Get the remaining disk space of the storage element
+    """
+    return diskSpace(path, size)
 
   types_createDirectory = [StringTypes]
   def export_createDirectory( self, dir_path ):
