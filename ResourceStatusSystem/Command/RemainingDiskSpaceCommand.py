@@ -4,11 +4,10 @@
 
 '''
 
-import os
+from datetime                                                   import datetime
 from DIRAC                                                      import S_OK, S_ERROR, gConfig
 from DIRAC.ResourceStatusSystem.Command.Command                 import Command
 from DIRAC.Core.DISET.RPCClient                                 import RPCClient
-from DIRAC.ResourceStatusSystem.Client.ResourceManagementClient import ResourceManagementClient
 
 __RCSID__ = '$Id:  $'
 
@@ -83,21 +82,21 @@ class RemainingDiskSpaceCommand( Command ):
 
     return urls
 
-  def doNew( self, masterParams = None ):
-    pass
-
-  def doCache( self ):
-    pass
-
-  def doMaster( self ):
-
-    self.rsClient = ResourceManagementClient()
+  def doCommand( self ):
+    """
+    Gets the total and the remaining disk space of all DIPS storage elements that
+    are found in the CS and inserts the results in the SpaceTokenOccupancyCache table
+    of ResourceManagementDB database.
+    """
 
     DIPSurls = self.getAllUrls( "dips" )
 
-    for name in DIPSurls:
-      self.rpc = RPCClient( DIPSurls[name], timeout=120 )
-      space = self.rpc.getRemainingDiskSpace("/", "GB")
-      self.rsClient.addOrModifySpaceTokenOccupancyCache(name, free = space )
+    if DIPSurls:
+      for name in DIPSurls:
+        self.rpc = RPCClient( DIPSurls[name], timeout=120 )
+        free = self.rpc.getRemainingDiskSpace("/")
+        total = self.rpc.getTotalDiskSpace("/")
+        self.rsClient.addOrModifySpaceTokenOccupancyCache(name, lastCheckTime = datetime.utcnow(), free = free,
+                                                          total = total, token = name )
 
     return S_OK()
