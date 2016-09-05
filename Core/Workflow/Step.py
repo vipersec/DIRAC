@@ -1,16 +1,15 @@
 """ Implementation of a step
 """
-__RCSID__ = "$Id:$"
-
 import os
 import time
-import types
 import traceback
 import sys
 
 from DIRAC.Core.Workflow.Parameter import *
 from DIRAC.Core.Workflow.Module import *
 from DIRAC import S_OK, S_ERROR
+
+__RCSID__ = "$Id$"
 
 class StepDefinition( AttributeCollection ):
 
@@ -132,10 +131,10 @@ class StepInstance( AttributeCollection ):
     AttributeCollection.__init__( self )
     self.parent = None
 
-    if obj == None:
+    if obj is None:
       self.parameters = ParameterCollection()
     elif isinstance( obj, StepInstance ) or isinstance( obj, StepDefinition ):
-      if name == None:
+      if name is None:
         self.setName( obj.getName() )
       else:
         self.setName( name )
@@ -217,7 +216,7 @@ class StepInstance( AttributeCollection ):
         filled above in the workflow
     """
     print 'Executing StepInstance', self.getName(), 'of type', self.getType(), definitions.keys()
-    # Report the Application state if the coresponding tool is supplied
+    # Report the Application state if the corresponding tool is supplied
     if self.workflow_commons.has_key( 'JobReport' ):
       if self.parent.workflowStatus['OK']:
         result = self.workflow_commons['JobReport'].setApplicationStatus( 'Executing ' + self.getName() )
@@ -305,7 +304,7 @@ class StepInstance( AttributeCollection ):
             if key != "OK":
               if key != "Value":
                 self.step_commons[key] = result[key]
-              elif type( result['Value'] ) == types.DictType:
+              elif isinstance( result['Value'], dict ):
                 for vkey in result['Value'].keys():
                   self.step_commons[vkey] = result['Value'][vkey]
 
@@ -316,10 +315,9 @@ class StepInstance( AttributeCollection ):
         exc = sys.exc_info()
         exc_type = exc[0]
         value = exc[1]
-        print "== EXCEPTION ==\n%s: %s\n\n%s===============" % (
-                   exc_type,
-                   value,
-                   "\n".join( traceback.format_tb( exc[2] ) ) )
+        print "== EXCEPTION ==\n%s: %s\n\n%s===============" % ( exc_type,
+                                                                 value,
+                                                                 "\n".join( traceback.format_tb( exc[2] ) ) )
 
         print "Step status: ", self.stepStatus
         print "Workflow status: ", self.parent.workflowStatus

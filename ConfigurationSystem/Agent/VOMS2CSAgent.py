@@ -6,8 +6,6 @@
     -
 """
 
-__RCSID__ = "$Id$"
-
 from DIRAC.Core.Base.AgentModule                       import AgentModule
 from DIRAC.ConfigurationSystem.Client.CSAPI            import CSAPI
 from DIRAC.FrameworkSystem.Client.NotificationClient   import NotificationClient
@@ -18,11 +16,29 @@ from DIRAC.ConfigurationSystem.Client.Helpers.Registry import getVOOption, getUs
                                                               getAllUsers
 from DIRAC.Core.Utilities.Proxy                        import executeWithUserProxy
 
+__RCSID__ = "$Id$"
+
 class VOMS2CSAgent( AgentModule ):
 
-  def initialize( self ):
+  def __init__( self, *args, **kwargs ):
+    """ Defines default parameters
+    """
+    super(VOMS2CSAgent, self).__init__( *args, **kwargs )
 
     self.__voDict = {}
+    self.__adminMsgs = {}
+    self.csapi = None
+    self.voChanged = False
+    self.dryRun = False
+
+    self.autoAddUsers = False
+    self.autoModifyUsers = False
+
+
+  def initialize( self ):
+    """ Initialize the default parameters
+    """
+
     voNames = self.am_getOption( 'VO', [] )
     if not voNames[0].lower() == "none":
       if voNames[0].lower() == "any":
@@ -31,16 +47,14 @@ class VOMS2CSAgent( AgentModule ):
       if not result['OK']:
         return result
       self.__voDict = result['Value']
+      self.log.notice( "VOs: %s" % self.__voDict.keys() )
 
-    self.__adminMsgs = {}
     self.csapi = CSAPI()
-    self.voChanged = False
 
-    self.log.notice( "VOs: %s" % self.__voDict.keys() )
+    self.dryRun = self.am_getOption( 'DryRun', self.dryRun )
+    self.autoAddUsers = self.am_getOption( 'AutoAddUsers', self.autoAddUsers )
+    self.autoModifyUsers = self.am_getOption( 'AutoModifyUsers', self.autoModifyUsers )
 
-    self.autoAddUsers = self.am_getOption( 'AutoAddUsers', False )
-    self.autoModifyUsers = self.am_getOption( 'AutoModifyUsers', False )
-    self.autoSuspendUsers = self.am_getOption( 'AutoSuspendUsers', False )
     return S_OK()
 
   def execute( self ):
@@ -72,12 +86,21 @@ class VOMS2CSAgent( AgentModule ):
                                        "VOMS2CSAgent run log", mailMsg,
                                        self.am_getOption( 'mailFrom', "DIRAC system" ) )
 
-    # We have accumulated all the changes, commit them now
-    result = self.csapi.commitChanges()
-    if not result[ 'OK' ]:
-      self.log.error( "Could not commit configuration changes", result[ 'Message' ] )
-      return result
-    self.log.info( "Configuration committed" )
+    if self.csapi.csModified:
+      # We have accumulated all the changes, commit them now
+      self.log.info( "There are changes to the CS ready to be committed" )
+      if self.dryRun:
+        self.log.info( "Dry Run: CS won't be updated" )
+        self.csapi.showDiff()
+      else:
+        result = self.csapi.commitChanges()
+        if not result[ 'OK' ]:
+          self.log.error( "Could not commit configuration changes", result[ 'Message' ] )
+          return result
+        self.log.notice( "Configuration committed" )
+    else:
+      self.log.info( "No changes to the CS recorded at this cycle" )
+
     return S_OK()
 
   @executeWithUserProxy
@@ -183,7 +206,7 @@ class VOMS2CSAgent( AgentModule ):
             fullRole = "/%s/%s" % ( vomsVOName, role )
             group = vomsDIRACMapping.get( fullRole )
             if group:
-              groupsWithRole.append( group )
+              groupsWithRole.extend( group )
           userDict['Groups'] = list( set( groupsWithRole + [defaultVOGroup] ) )
           self.__adminMsgs[ 'Info' ].append( "Adding new user %s: %s" % ( newDiracName, str( userDict ) ) )
           self.voChanged = True
@@ -203,7 +226,7 @@ class VOMS2CSAgent( AgentModule ):
           fullRole = "/%s/%s" % ( vomsVOName, role )
           group = vomsDIRACMapping.get( fullRole )
           if group:
-            groupsWithRole.append( group )
+            groupsWithRole.extend( group )
         keepGroups = nonVOGroups + groupsWithRole + [defaultVOGroup]
         for group in existingGroups:
           role = diracVOMSMapping[group]
@@ -239,11 +262,13 @@ class VOMS2CSAgent( AgentModule ):
 # Local utilities
 ###############################################################
 
-def getVOMSVOs( voList = [] ):
+def getVOMSVOs( voList = None ):
   """ Get all VOs that have VOMS correspondence
 
   :return: dictonary of the VO -> VOMSName correspondence
   """
+  if voList is None:
+    voList = []
   voDict = {}
   if not voList:
     result = gConfig.getSections( '/Registry/VO' )
@@ -275,6 +300,10 @@ def getUserName( dn, mail ):
   if len( dnName ) >= 12:
     return dnName[:11]
 
+  # May be the mail name is still more reasonable
+  if len( dnName ) < len( mailName ) and mailName.isalpha():
+    return mailName
+
   return dnName
 
 def getUserNameFromMail( mail ):
@@ -302,7 +331,11 @@ def getUserNameFromDN( dn ):
   for entry in dn.split( '/' ):
     if entry:
       key, value = entry.split( '=' )
-      if key == 'CN':
+      if key.upper() == 'CN':
+        ind = value.find( "(" )
+        # Strip of possible words in parenthesis in the name
+        if ind != -1:
+          value = value[:ind]
         names = value.split()
         if len( names ) == 1:
           nname = names[0].lower()
@@ -319,7 +352,7 @@ def getUserNameFromDN( dn ):
             names.pop( 0 )
             robot = True
           for name in list( names ):
-            if name.isdigit() or "@" in name:
+            if name[0].isdigit() or "@" in name:
               names.pop( names.index( name ) )
           if robot:
             nname = "robot-%s" % names[-1].lower()

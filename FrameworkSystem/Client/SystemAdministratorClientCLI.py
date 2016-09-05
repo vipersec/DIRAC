@@ -2,8 +2,6 @@
 ########################################################################
 """ System Administrator Client Command Line Interface """
 
-__RCSID__ = "$Id$"
-
 import sys
 import pprint
 import os
@@ -12,6 +10,7 @@ import readline
 import datetime
 import time
 
+from DIRAC import gConfig, gLogger
 from DIRAC.Core.Base.CLI import CLI, colorize
 from DIRAC.FrameworkSystem.Client.SystemAdministratorClient import SystemAdministratorClient
 from DIRAC.FrameworkSystem.Client.SystemAdministratorIntegrator import SystemAdministratorIntegrator
@@ -21,10 +20,11 @@ from DIRAC.FrameworkSystem.Client.ComponentInstaller import gComponentInstaller
 from DIRAC.ConfigurationSystem.Client.Helpers import getCSExtensions
 from DIRAC.Core.Utilities import List
 from DIRAC.Core.Utilities.PromptUser import promptUser
-from DIRAC import gConfig
-from DIRAC import gLogger
 from DIRAC.Core.Utilities.PrettyPrint import printTable
+from DIRAC.Core.Utilities.File import mkDir
 from DIRAC.Core.Security.ProxyInfo import getProxyInfo
+
+__RCSID__ = "$Id$"
 
 class SystemAdministratorClientCLI( CLI ):
   """ Line oriented command interpreter for administering DIRAC components
@@ -46,8 +46,7 @@ class SystemAdministratorClientCLI( CLI ):
     # store history
     histfilename = os.path.basename(sys.argv[0])
     historyFile = os.path.expanduser( "~/.dirac/%s.history" % histfilename[0:-3])
-    if not os.path.exists( os.path.dirname(historyFile) ):
-      os.makedirs( os.path.dirname(historyFile) )
+    mkDir(os.path.dirname(historyFile))
     if os.path.isfile( historyFile ):
       readline.read_history_file( historyFile )
     readline.set_history_length(1000)
@@ -542,12 +541,6 @@ class SystemAdministratorClientCLI( CLI ):
       gLogger.notice( self.do_install.__doc__ )
       return
 
-    # Retrieve user installing the component
-    result = getProxyInfo()
-    if not result[ 'OK' ]:
-      self._errMsg( result[ 'Message'] )
-    user = result[ 'Value' ][ 'username' ]
-
     option = argss[0]
     del argss[0]
     if option == "mysql":
@@ -635,6 +628,7 @@ class SystemAdministratorClientCLI( CLI ):
 
       specialOptions = {}
       module = ''
+     
       for i in range(len(argss)):
         if argss[i] == "-m":
           specialOptions['Module'] = argss[i+1]
@@ -654,11 +648,15 @@ class SystemAdministratorClientCLI( CLI ):
         self._errMsg( result['Message'] )
         return
       hostSetup = result['Value']['Setup']
-
+    
       # Install Module section if not yet there
       if module:
         result = gComponentInstaller.addDefaultOptionsToCS( gConfig, option, system, module,
                                                             getCSExtensions(), hostSetup )
+        # in case of Error we must stop, this can happen when the module name is wrong...
+        if not result['OK']:
+          self._errMsg( result['Message'] )
+          return
         # Add component section with specific parameters only
         result = gComponentInstaller.addDefaultOptionsToCS( gConfig, option, system, component,
                                                             getCSExtensions(), hostSetup, specialOptions,
@@ -707,6 +705,7 @@ class SystemAdministratorClientCLI( CLI ):
         if not result['OK']:
           self._errMsg( 'Error registering installation into database: %s' % result[ 'Message' ] )
           return
+      
       result = MonitoringUtilities.monitorInstallation( option, system, component, module, cpu = cpu, hostname = hostname )
       if not result['OK']:
         self._errMsg( 'Error registering installation into database: %s' % result[ 'Message' ] )
