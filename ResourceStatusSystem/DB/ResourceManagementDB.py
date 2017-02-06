@@ -309,7 +309,7 @@ class ResourceManagementDB( object ):
     try:
 
       # refresh metadata
-      self.metadata.create_all( self.engine )
+      self.session.commit()
 
       table = self.metadata.tables.get( table )
 
@@ -351,7 +351,7 @@ class ResourceManagementDB( object ):
       meta = False
 
       # refresh metadata
-      self.metadata.create_all( self.engine )
+      self.session.commit()
 
       table = self.metadata.tables.get( table )
 
@@ -359,7 +359,7 @@ class ResourceManagementDB( object ):
 
       columns = []
       for name, argument in kwargs.items():
-        if argument and name == "Meta":
+        if argument and name == "Meta" and 'columns' in argument:
           meta = True
           for column in argument['columns']:
             columns.append( getattr(table.c, column) )
